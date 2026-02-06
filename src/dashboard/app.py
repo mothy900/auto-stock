@@ -136,15 +136,47 @@ try:
             'timestamp': [datetime.fromtimestamp(ts, pytz.timezone('US/Eastern')) for ts in history.timestamp],
             'equity': history.equity
         })
-        # Reset index for Altair
-        
         # Plot with Altair for better control (Dynamic Y-axis)
         import altair as alt
         
-        chart = alt.Chart(df_hist).mark_line(color="#00FF00").encode(
+        # Create a selection that chooses the nearest point & selects based on x-value
+        nearest = alt.selection_point(nearest=True, on='mouseover', fields=['timestamp'], empty=False)
+        
+        # The basic line
+        line = alt.Chart(df_hist).mark_line(color="#00FF00").encode(
             x=alt.X('timestamp:T', title="Time", axis=alt.Axis(format='%m-%d %H:%M')),
-            y=alt.Y('equity:Q', scale=alt.Scale(zero=False), title='Equity ($)'), # zero=False makes it dynamic
-            tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), 'equity']
+            y=alt.Y('equity:Q', scale=alt.Scale(zero=False), title='Equity ($)')
+        )
+
+        # Transparent selectors across the chart. This is what tells us
+        # the x-value of the cursor
+        selectors = alt.Chart(df_hist).mark_point().encode(
+            x='timestamp:T',
+            opacity=alt.value(0),
+        ).add_params(
+            nearest
+        )
+
+        # Draw points on the line, and highlight based on selection
+        points = line.mark_point().encode(
+            opacity=alt.condition(nearest, alt.value(1), alt.value(0))
+        )
+
+        # Draw text labels near the points, and highlight based on selection
+        text = line.mark_text(align='left', dx=5, dy=-5).encode(
+            text=alt.condition(nearest, alt.Text('equity:Q', format='$,.2f'), alt.value(' '))
+        )
+
+        # Draw a rule at the location of the selection
+        rules = alt.Chart(df_hist).mark_rule(color='gray').encode(
+            x='timestamp:T',
+        ).transform_filter(
+            nearest
+        )
+
+        # Put the five layers into a chart and bind the data
+        chart = alt.layer(
+            line, selectors, points, rules, text
         ).properties(
             height=350
         ).interactive()
