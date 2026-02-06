@@ -11,7 +11,6 @@ import pandas as pd
 import time
 from datetime import datetime
 import pytz
-import pytz
 from src.data.alpaca_interface import AlpacaInterface
 from src.data.database import DatabaseManager
 from src.backtest.analyzer import PerformanceAnalyzer

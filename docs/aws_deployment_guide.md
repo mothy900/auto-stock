@@ -27,7 +27,7 @@ sudo dnf install git python3-pip -y
 ## 3. Clone Repository & Setup
 ```bash
 # Clone
-git clone <your-repository-url> stock-trading
+git clone https://github.com/mothy900/auto-stock.git stock-trading
 cd stock-trading
 
 # Virtual Environment
