@@ -3,9 +3,12 @@ import sys
 import os
 
 # Add project root to sys.path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../.."))
-sys.path.insert(0, project_root)
+import os
+import sys
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+os.chdir(project_root)  # Ensure current working directory is root
 
 import pandas as pd
 import time
