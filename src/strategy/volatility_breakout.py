@@ -13,6 +13,7 @@ class VolatilityBreakoutStrategy(BaseStrategy):
         self.k = initial_k
         self.target_price = None
         self.prev_close = None
+        self.range_k = None  # Fix: Initialize to avoid AttributeError
         
     def on_market_open(self, daily_ohlcv: pd.DataFrame):
         """
