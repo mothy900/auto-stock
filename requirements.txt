@@ -1,0 +1,11 @@
+alpaca-py>=0.32.0
+pandas>=2.0.0
+numpy>=1.24.0
+sqlite3-api  # Note: sqlite3 is stdlib, but ensuring env checks
+streamlit>=1.28.0
+apscheduler>=3.10.0
+pytz>=2023.3
+python-dotenv>=1.0.0
+matplotlib>=3.7.0
+plotly>=5.18.0
+streamlit-autorefresh>=0.0.1
