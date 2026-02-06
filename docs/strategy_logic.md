@@ -14,35 +14,26 @@ It does not predict the direction (up/down) in advance. instead, it waits for th
 *   **Time**: Every morning before 09:30 ET.
 *   **Action 1: Calculate K-Value (Dynamic Optimization)**
     *   The bot analyzes the last **30 days** of data for each symbol.
-    *   It tests K values from `0.1` to `0.9` to simulate: *"If I traded with this K, what would be the return?"*
+    *   It tests K values from `0.3` to `0.9` (updated from 0.1 for stability).
     *   The K value with the highest cumulative return is selected for today.
-    *   *Effect: In volatile markets, K increases (harder to buy). In trending markets, K decreases (easier to buy).*
-*   **Action 2: Position Sizing**
-    *   **Formula**: `(Total Buying Power * 0.90) / 12 Symbols`
-    *   It allocates capital equally, leaving a 10% safety buffer for slippage and fees.
+*   **Action 2: Trend Filter Calculation**
+    *   Calculates the **20-day Simple Moving Average (SMA)**.
+    *   *Rule*: If Current Price < 20-day SMA, trade entry is suppressed (Bear Market Filter).
 
 ### 🚀 B. Market Open (Entry Logic)
 *   **Time**: 09:30 ET ~ 15:55 ET.
-*   **Target Calculation**:
-    ```math
-    Target Price = Today's Open Price + (Yesterday's Range × Optimized K)
-    ```
-    *(Range = Yesterday High - Yesterday Low)*
 *   **Buy Condition**:
-    *   Wait primarily.
-    *   **IF** `Current Price` >= `Target Price` **THEN** Market Buy immediately.
-    *   **Logic**: "The price has surged enough to confirm a strong upward trend."
-*   **Frequency**: Maximum **1 Entry per day** per symbol.
+    *   **Price Condition**: `Current Price` >= `Target Price` (Open + Range * K)
+    *   **Trend Condition**: `Current Price` > `20-day SMA` (Must be in uptrend)
+    *   **Action**: Market Buy immediately.
 
-### 🛑 C. Market Close (Exit Logic)
-*   **Time**: 15:55 ET (5 minutes before official close).
-*   **Action**: **Liquidate All Positions (Market Sell)**.
-*   **Reason**:
-    *   Eliminate **Overnight Risk** (gap downs next morning).
-    *   Compounding is reset daily.
-*   **Stop-Loss / Take-Profit**:
-    *   Currently **Disabled**.
-    *   Logic: "Let profits run until the end of the day." (Intraday volatility is noise).
+### 🛑 C. Risk Management (Exit Logic)
+*   **1. Stop-Loss (New)**:
+    *   If current price drops **-3%** below average entry price -> **Immediate Market Sell**.
+    *   Protects against sudden intraday crashes.
+*   **2. Time-Cut (Standard)**:
+    *   **Time**: 15:55 ET.
+    *   All remaining positions are closed to avoid overnight risk.
 
 ---
 

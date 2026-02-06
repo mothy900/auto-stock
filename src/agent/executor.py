@@ -111,10 +111,12 @@ class TradingExecutor:
                     try:
                         pos = self.alpaca.trading_client.get_open_position(symbol)
                         current_qty = float(pos.qty)
+                        avg_entry_price = float(pos.avg_entry_price)
                     except:
                         current_qty = 0
+                        avg_entry_price = 0.0
                     
-                    signal = strategy.generate_signal(current_price, current_qty)
+                    signal = strategy.generate_signal(current_price, current_qty, avg_entry_price)
                     
                     # 4. Execute
                     if signal:
@@ -132,7 +134,7 @@ class TradingExecutor:
                         elif signal['action'] == 'SELL':
                             order = self.alpaca.submit_order(symbol, current_qty, 'sell')
                             logger.info(f"EXECUTED SELL {symbol}: {current_qty} @ {current_price}")
-                            self.db.log_trade(symbol, 'SELL', current_qty, current_price, "End of Day", str(order.id) if hasattr(order, 'id') else None)
+                            self.db.log_trade(symbol, 'SELL', current_qty, current_price, signal['reason'], str(order.id) if hasattr(order, 'id') else None)
 
                 await asyncio.sleep(1) # 1 sec Tick
                 
