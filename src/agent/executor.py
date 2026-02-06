@@ -100,9 +100,10 @@ class TradingExecutor:
                         # Try to get today's opening bar
                         # If simple, we can just wait for the first bar. 
                         # Let's simplify: In paper trading, we might assume Open is available after 9:30
-                        today_bars = self.alpaca.get_bars(symbol, datetime.now().date(), datetime.now().date())
-                        if today_bars is not None and not today_bars.empty:
-                            open_price = today_bars.iloc[0]['open']
+                        # Try to get today's opening bar using Snapshot (Real-time IEX)
+                        snapshot = self.alpaca.get_snapshot(symbol)
+                        if snapshot and snapshot.daily_bar:
+                            open_price = snapshot.daily_bar.open
                             strategy.update_target(open_price)
                     
                     # 3. Generate Signal

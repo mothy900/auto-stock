@@ -81,6 +81,17 @@ class AlpacaInterface:
             logger.error(f"Error fetching market clock: {e}")
             return None
 
+    def get_snapshot(self, symbol: str):
+        """Fetch snapshot data which includes daily bar (Open, High, Low, Close)."""
+        from alpaca.data.requests import StockSnapshotRequest
+        try:
+            req = StockSnapshotRequest(symbol_or_symbols=symbol, feed='iex')
+            snapshot = self.data_client.get_stock_snapshot(req)
+            return snapshot[symbol]
+        except Exception as e:
+            logger.error(f"Error fetching snapshot for {symbol}: {e}")
+            return None
+
     def get_latest_price(self, symbol: str) -> float:
         """Fetch the latest trade price for a symbol."""
         from alpaca.data.requests import StockLatestTradeRequest
