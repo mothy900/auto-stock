@@ -5,10 +5,17 @@ import os
 # Add project root to sys.path
 import os
 import sys
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Calculate path to project root (2 levels up from src/dashboard/app.py)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+
 if project_root not in sys.path:
+    # Insert at 0 to ensure local modules take precedence
     sys.path.insert(0, project_root)
-os.chdir(project_root)  # Ensure current working directory is root
+
+# Force working directory to project root
+os.chdir(project_root)
 
 import pandas as pd
 import time
