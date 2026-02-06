@@ -112,8 +112,23 @@ try:
     # 2. Equity History Chart
     st.subheader("📈 Asset Growth (Equity History)")
     
+    # Period Selector
+    col_p, col_c = st.columns([1, 4])
+    with col_p:
+        period = st.selectbox("Period", ["1D", "1W", "1M", "3M", "1A"], index=1)
+    
+    # Map Timeframe based on Period
+    tf_map = {
+        "1D": "5Min",
+        "1W": "15Min",
+        "1M": "1H",
+        "3M": "1D",
+        "1A": "1D"
+    }
+    timeframe = tf_map.get(period, "1D")
+
     # Fetch History
-    history = alpaca.get_portfolio_history(period="1M", timeframe="1D")
+    history = alpaca.get_portfolio_history(period=period, timeframe=timeframe)
     
     if history and history.timestamp:
         # Convert to DataFrame
@@ -121,10 +136,20 @@ try:
             'timestamp': [datetime.fromtimestamp(ts, pytz.timezone('US/Eastern')) for ts in history.timestamp],
             'equity': history.equity
         })
-        df_hist.set_index('timestamp', inplace=True)
+        # Reset index for Altair
         
-        # Plot (Line Chart)
-        st.line_chart(df_hist['equity'], color="#00FF00")
+        # Plot with Altair for better control (Dynamic Y-axis)
+        import altair as alt
+        
+        chart = alt.Chart(df_hist).mark_line(color="#00FF00").encode(
+            x=alt.X('timestamp:T', title="Time", axis=alt.Axis(format='%m-%d %H:%M')),
+            y=alt.Y('equity:Q', scale=alt.Scale(zero=False), title='Equity ($)'), # zero=False makes it dynamic
+            tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), 'equity']
+        ).properties(
+            height=350
+        ).interactive()
+        
+        st.altair_chart(chart, use_container_width=True)
     else:
         st.info("No sufficient history data available yet.")
 
