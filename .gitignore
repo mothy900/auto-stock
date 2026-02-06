@@ -44,7 +44,7 @@ Thumbs.db
 
 # Project Specific
 logs/
-data/
+/data/
 
 # Sensitive Keys
 *.pem
