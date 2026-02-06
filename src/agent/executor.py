@@ -125,12 +125,14 @@ class TradingExecutor:
                             qty = int(self.investment_per_symbol // current_price)
                             
                             if qty > 0:
-                                self.alpaca.submit_order(symbol, qty, 'buy')
+                                order = self.alpaca.submit_order(symbol, qty, 'buy')
                                 logger.info(f"EXECUTED BUY {symbol}: {qty} @ {current_price}")
+                                self.db.log_trade(symbol, 'BUY', qty, current_price, signal['reason'], str(order.id) if hasattr(order, 'id') else None)
                         
                         elif signal['action'] == 'SELL':
-                            self.alpaca.submit_order(symbol, current_qty, 'sell')
+                            order = self.alpaca.submit_order(symbol, current_qty, 'sell')
                             logger.info(f"EXECUTED SELL {symbol}: {current_qty} @ {current_price}")
+                            self.db.log_trade(symbol, 'SELL', current_qty, current_price, "End of Day", str(order.id) if hasattr(order, 'id') else None)
 
                 await asyncio.sleep(1) # 1 sec Tick
                 

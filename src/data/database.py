@@ -121,6 +121,15 @@ class DatabaseManager:
             self.conn.rollback()
             raise
 
+    def log_trade(self, symbol: str, side: str, qty: float, price: float, reason: str, order_id: str = None):
+        """Log a trade execution."""
+        query = """
+            INSERT INTO trade_logs (symbol, side, quantity, price, reason, order_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+        self.execute_update(query, (symbol, side, qty, price, reason, order_id))
+        logger.debug(f"Logged trade: {side} {qty} {symbol} @ {price}")
+
 if __name__ == "__main__":
     # Test initialization
     db = DatabaseManager()
