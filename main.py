@@ -29,7 +29,8 @@ async def main():
     print("---------------------------------------------------")
     
     # Configuration
-    SYMBOLS = ["NVDA", "TSLA", "AMD", "TQQQ", "SOXL"]
+    # Added from Volatility Report: INOD, PLTR, DUK, TIGR, PAYO, HROW, SGRY
+    SYMBOLS = ["NVDA", "TSLA", "AMD", "TQQQ", "SOXL", "INOD", "PLTR", "DUK", "TIGR", "PAYO", "HROW", "SGRY"]
     INVESTMENT_PER_SYMBOL = 50000.0 # Paper money
     
     logger.info(f"Target Symbols: {SYMBOLS}")

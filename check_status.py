@@ -8,7 +8,7 @@ from src.data.database import DatabaseManager
 async def check_status():
     alpaca = AlpacaInterface()
     db = DatabaseManager()
-    symbols = ["NVDA", "TSLA", "AMD", "TQQQ", "SOXL"]
+    symbols = ["NVDA", "TSLA", "AMD", "TQQQ", "SOXL", "INOD", "PLTR", "DUK", "TIGR", "PAYO", "HROW", "SGRY"]
     
     print("\n🔎 Manual Strategy Check (Live Market Data)\n" + "="*50)
     
