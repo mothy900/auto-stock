@@ -51,3 +51,7 @@ logs/
 
 # Logs
 *.log
+
+# Streamlit Secrets (Passwords)
+.streamlit/secrets.toml
+secrets.toml
