@@ -5,7 +5,10 @@ from datetime import datetime
 from typing import List, Dict
 from src.data.alpaca_interface import AlpacaInterface
 from src.data.database import DatabaseManager
+from src.strategy.base import BaseStrategy
 from src.strategy.volatility_breakout import VolatilityBreakoutStrategy
+from src.strategy.bollinger_reversion import BollingerReversionStrategy
+from src.strategy.rsi_momentum import RSIMomentumStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +20,11 @@ class TradingExecutor:
         self.db = DatabaseManager()
         
         # Initialize Strategies
-        self.strategies: Dict[str, VolatilityBreakoutStrategy] = {
-            s: VolatilityBreakoutStrategy(s) for s in symbols
-        }
+        self.strategies: List[BaseStrategy] = []
+        for s in symbols:
+            self.strategies.append(VolatilityBreakoutStrategy(s))
+            self.strategies.append(BollingerReversionStrategy(s))
+            self.strategies.append(RSIMomentumStrategy(s))
         self.running = False
 
     async def initialize_day(self):
@@ -29,7 +34,8 @@ class TradingExecutor:
         # 1. Update Market Data is assumed done by Scheduler/Collector separately
         # Here we just load what we have from DB to optimize K
         
-        for symbol, strategy in self.strategies.items():
+        for strategy in self.strategies:
+            symbol = strategy.symbol
             try:
                 # Load recent daily data for K optimization
                 query = """
@@ -57,8 +63,9 @@ class TradingExecutor:
                     'close': 'last'
                 }).dropna()
 
-                # Optimize K
-                best_k = strategy.optimize_k(daily_df)
+                # Optimize K (only for VolatilityBreakout)
+                if isinstance(strategy, VolatilityBreakoutStrategy):
+                    best_k = strategy.optimize_k(daily_df)
                 
                 # Set Initial State (Range calculation)
                 # We pass the full daily_df so it can pick the last closed day
@@ -81,7 +88,8 @@ class TradingExecutor:
                     await asyncio.sleep(60)
                     continue
 
-                for symbol, strategy in self.strategies.items():
+                for strategy in self.strategies:
+                    symbol = strategy.symbol
                     # 1. Get Real-time Data
                     # We can use Alpaca's get_latest_trade or bar
                     # For breakout, we check current price against target
@@ -96,7 +104,7 @@ class TradingExecutor:
                     # Special Case logic removed (redundant)
 
                     # 2. Update Strategy Target if needed (requires Open price)
-                    if strategy.target_price is None and strategy.range_k is not None:
+                    if hasattr(strategy, 'update_target') and strategy.target_price is None and strategy.range_k is not None:
                         # Try to get today's opening bar
                         # If simple, we can just wait for the first bar. 
                         # Let's simplify: In paper trading, we might assume Open is available after 9:30
@@ -116,7 +124,15 @@ class TradingExecutor:
                         current_qty = 0
                         avg_entry_price = 0.0
                     
-                    signal = strategy.generate_signal(current_price, current_qty, avg_entry_price)
+                    # Calculate RSI if needed
+                    current_rsi = None
+                    if isinstance(strategy, RSIMomentumStrategy):
+                         # TODO: Implement RSI calculation using alpaca.get_bars
+                         # For now, let's skip or try to get basics.
+                         # Real implementation needs historical bars. 
+                         pass
+
+                    signal = strategy.generate_signal(current_price, current_qty, avg_entry_price, current_rsi=current_rsi) if isinstance(strategy, RSIMomentumStrategy) else strategy.generate_signal(current_price, current_qty, avg_entry_price)
                     
                     # 4. Execute
                     if signal:
@@ -128,24 +144,23 @@ class TradingExecutor:
                             
                             if qty > 0:
                                 order = self.alpaca.submit_order(symbol, qty, 'buy')
-                                logger.info(f"EXECUTED BUY {symbol}: {qty} @ {current_price}")
-                                self.db.log_trade(symbol, 'BUY', qty, current_price, signal['reason'], str(order.id) if hasattr(order, 'id') else None)
+                                logger.info(f"EXECUTED BUY {symbol}: {qty} @ {current_price} ({strategy.name})")
+                                self.db.log_trade(symbol, 'BUY', qty, current_price, signal['reason'], str(order.id) if hasattr(order, 'id') else None, strategy.name)
                         
                         elif signal['action'] == 'SELL':
                             order = self.alpaca.submit_order(symbol, current_qty, 'sell')
-                            logger.info(f"EXECUTED SELL {symbol}: {current_qty} @ {current_price}")
-                            self.db.log_trade(symbol, 'SELL', current_qty, current_price, signal['reason'], str(order.id) if hasattr(order, 'id') else None)
+                            logger.info(f"EXECUTED SELL {symbol}: {current_qty} @ {current_price} ({strategy.name})")
+                            self.db.log_trade(symbol, 'SELL', current_qty, current_price, signal['reason'], str(order.id) if hasattr(order, 'id') else None, strategy.name)
 
                 await asyncio.sleep(1) # 1 sec Tick
                 
                 # Heartbeat Log every 10 seconds (More frequent updates)
                 if int(datetime.now().second) % 10 == 0:
-                    for s in self.symbols:
-                        strat = self.strategies[s]
-                        if strat.target_price:
-                            # Log the check process
-                            condition = "BUY" if self.alpaca.get_latest_price(s) >= strat.target_price else "WAIT"
-                            logger.info(f"🔍 [{s}] Check: Current {self.alpaca.get_latest_price(s):.2f} vs Target {strat.target_price:.2f} -> {condition}")
+                    for s in self.strategies:
+                        if isinstance(s, VolatilityBreakoutStrategy) and s.target_price:
+                             # Log the check process
+                            condition = "BUY" if self.alpaca.get_latest_price(s.symbol) >= s.target_price else "WAIT"
+                            logger.info(f"🔍 [{s.symbol}] {s.name} Check: Current {self.alpaca.get_latest_price(s.symbol):.2f} vs Target {s.target_price:.2f} -> {condition}")
                         else:
                             logger.info(f"[{s}] Initializing...")
                     await asyncio.sleep(1)

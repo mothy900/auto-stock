@@ -76,7 +76,8 @@ class DatabaseManager:
                     quantity INTEGER,
                     price REAL,
                     reason TEXT, -- e.g., 'Strategy', 'Stop_Loss', 'Time_Cut'
-                    order_id TEXT
+                    order_id TEXT,
+                    strategy_name TEXT
                 );
             """)
 
@@ -92,10 +93,31 @@ class DatabaseManager:
             """)
             
             self.conn.commit()
-            logger.info("Tables created successfully.")
+            self.migrate_schema()
+            logger.info("Tables created and schema migrated successfully.")
             
         except sqlite3.Error as e:
             logger.error(f"Error creating tables: {e}")
+            self.conn.rollback()
+
+    def migrate_schema(self):
+        """Migrates the database schema to the latest version."""
+        if not self.conn:
+            self.connect()
+        
+        try:
+            # Check if strategy_name column exists in trade_logs
+            # We access row directly assuming row_factory is sqlite3.Row or we use fetchall
+            cursor = self.conn.execute("PRAGMA table_info(trade_logs)")
+            columns = [row['name'] for row in cursor.fetchall()]
+            
+            if 'strategy_name' not in columns:
+                logger.info("Migrating schema: Adding strategy_name column to trade_logs")
+                self.conn.execute("ALTER TABLE trade_logs ADD COLUMN strategy_name TEXT")
+                self.conn.commit()
+                
+        except sqlite3.Error as e:
+            logger.error(f"Schema migration failed: {e}")
             self.conn.rollback()
 
     def execute_query(self, query: str, params: tuple = ()) -> List[sqlite3.Row]:
@@ -121,14 +143,14 @@ class DatabaseManager:
             self.conn.rollback()
             raise
 
-    def log_trade(self, symbol: str, side: str, qty: float, price: float, reason: str, order_id: str = None):
+    def log_trade(self, symbol: str, side: str, qty: float, price: float, reason: str, order_id: str = None, strategy_name: str = None):
         """Log a trade execution."""
         query = """
-            INSERT INTO trade_logs (symbol, side, quantity, price, reason, order_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO trade_logs (symbol, side, quantity, price, reason, order_id, strategy_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """
-        self.execute_update(query, (symbol, side, qty, price, reason, order_id))
-        logger.debug(f"Logged trade: {side} {qty} {symbol} @ {price}")
+        self.execute_update(query, (symbol, side, qty, price, reason, order_id, strategy_name))
+        logger.debug(f"Logged trade: {side} {qty} {symbol} @ {price} ({strategy_name})")
 
 if __name__ == "__main__":
     # Test initialization

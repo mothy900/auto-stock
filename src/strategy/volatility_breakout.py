@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class VolatilityBreakoutStrategy(BaseStrategy):
     def __init__(self, symbol: str, initial_k: float = 0.5):
-        super().__init__(symbol)
+        super().__init__(symbol, "VolatilityBreakout")
         self.k = initial_k
         self.target_price = None
         self.prev_close = None

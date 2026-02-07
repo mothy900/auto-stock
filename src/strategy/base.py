@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 
 class BaseStrategy(ABC):
-    def __init__(self, symbol: str):
+    def __init__(self, symbol: str, name: str):
         self.symbol = symbol
+        self.name = name
 
     @abstractmethod
     def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:

@@ -287,7 +287,16 @@ with tab2:
         req_closed = GetOrdersRequest(status=QueryOrderStatus.CLOSED, limit=500)
         closed_orders = alpaca.trading_client.get_orders(filter=req_closed)
         
-        daily_stats = PerformanceAnalyzer.calculate_daily_performance(closed_orders)
+        # Fetch Strategy Map from DB
+        try:
+            strat_rows = db.execute_query("SELECT order_id, strategy_name FROM trade_logs WHERE order_id IS NOT NULL")
+            strategy_map = {row['order_id']: row['strategy_name'] for row in strat_rows}
+        except Exception as e:
+            # Log error but proceed (might be empty table)
+            print(f"Strategy map fetch failed: {e}")
+            strategy_map = {}
+
+        daily_stats = PerformanceAnalyzer.calculate_daily_performance(closed_orders, strategy_map)
         metrics = PerformanceAnalyzer.get_summary_metrics(daily_stats)
         
         # Metrics Top Row
@@ -301,9 +310,23 @@ with tab2:
         
         if not daily_stats.empty:
             st.subheader("Cumulative Profit")
+            # Group by Date for cumulative sum (summing across all strategies/symbols for the day)
             daily_pl_sum = daily_stats.groupby('Date')['Net_PL'].sum().cumsum()
             st.line_chart(daily_pl_sum)
             
+            st.subheader("Strategy Comparison")
+            strat_metrics = PerformanceAnalyzer.get_metrics_by_strategy(daily_stats)
+            if not strat_metrics.empty:
+                 c1, c2 = st.columns(2)
+                 with c1:
+                     st.caption("Win Rate by Strategy (%)")
+                     st.bar_chart(strat_metrics.set_index('Strategy')['Win_Rate'])
+                 with c2:
+                     st.caption("Avg P/L by Strategy ($)")
+                     st.bar_chart(strat_metrics.set_index('Strategy')['Avg_PL'])
+                 
+                 st.dataframe(strat_metrics, use_container_width=True)
+
             st.subheader("Daily Details")
             st.dataframe(
                 daily_stats.style.format({
