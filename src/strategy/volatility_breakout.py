@@ -62,15 +62,26 @@ class VolatilityBreakoutStrategy(BaseStrategy):
         """
         Checks if current price breaks out the target OR hits stop loss.
         """
-        # 1. STOP LOSS CHECK (-3%)
+        # 1. STOP LOSS (-3%) & TAKE PROFIT (+5%) CHECK
         if current_position > 0 and avg_entry_price > 0:
-            loss_pct = (current_price - avg_entry_price) / avg_entry_price
-            if loss_pct <= -0.03: # -3% Stop Loss
-                logger.warning(f"[{self.symbol}] STOP LOSS ACTIVATED! Current: {current_price}, Entry: {avg_entry_price} ({loss_pct:.2%})")
+            profit_pct = (current_price - avg_entry_price) / avg_entry_price
+            
+            # Stop Loss
+            if profit_pct <= -0.03: 
+                logger.warning(f"[{self.symbol}] STOP LOSS ACTIVATED! Current: {current_price}, Entry: {avg_entry_price} ({profit_pct:.2%})")
                 return {
                     "action": "SELL",
                     "price": current_price,
                     "reason": "Stop Loss (-3%)"
+                }
+            
+            # Take Profit (New)
+            if profit_pct >= 0.05:
+                logger.info(f"[{self.symbol}] TAKE PROFIT REACHED! Current: {current_price}, Entry: {avg_entry_price} ({profit_pct:.2%})")
+                return {
+                    "action": "SELL",
+                    "price": current_price,
+                    "reason": "Take Profit (+5%)"
                 }
 
         if self.target_price is None:

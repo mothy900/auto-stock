@@ -9,7 +9,7 @@ Objective: Maximize risk-adjusted returns by exploiting intraday momentum while 
 Operating Environment: Alpaca Paper Trading (US Equity Market).
 
 2. Capability Overview
-The agent possesses the ability to ingest real-time market data, calculate technical indicators, execute buy/sell orders, and manage portfolio risk. It operates autonomously during US market hours (09:30 - 16:00 ET).
+The agent possesses the ability to ingest real-time market data, calculate technical indicators, execution buy/sell orders, and manage portfolio risk. It operates autonomously during US market hours (09:30 - 16:00 ET).
 
 3. Tool Definitions (Function Calls)
 A. Market Data Perception
@@ -40,7 +40,7 @@ Formula: Target = Today_Open + (Yesterday_High - Yesterday_Low) * k
 
 optimize_k_value(symbol: str) -> float
 
-Description: Runs a backtest simulation on the last 20 days of data to find the 'K' value (0.1~0.9) that yields the highest cumulative return.
+Description: Runs a backtest simulation on the last 20 days of data to find the 'K' value (0.3~0.9) that yields the highest cumulative return.
 
 Usage: Called once daily before market open.
 
@@ -86,13 +86,13 @@ Loop every 1 second:
 
 price = get_current_price()
 
-If price >= target_price AND no_position:
+If price >= target_price AND price > sma_20 AND no_position:
 
 submit_buy_order()
 
 If position_exists:
 
-Check Stop Loss condition.
+Check Stop Loss condition (-3%).
 
 15:55 ET (Market Close Approach):
 
@@ -107,3 +107,49 @@ Data Integrity: If get_current_price() returns stale data (> 1 min old), pause t
 
 Capital Allocation: Never invest more than 20% of total equity in a single trade (Kelly Criterion simplified).
 
+6. Deployment Procedures (AWS EC2)
+A. Initial Setup
+1. Provision EC2 Instance (Amazon Linux 2023, t2.micro).
+2. Configure Security Group: Allow SSH (22) and Streamlit (8501).
+3. Install Dependencies:
+   ```bash
+   sudo dnf install git python3-pip
+   git clone https://github.com/mothy900/auto-stock.git
+   cd auto-stock
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+B. Configuration
+1. Create `.env` file with Alpaca API keys.
+2. Create `.streamlit/secrets.toml` for dashboard password.
+
+C. Service Management (Systemd)
+1. Create `/etc/systemd/system/antigravity.service`:
+   ```ini
+   [Unit]
+   Description=Antigravity Trading Bot
+   After=network.target
+
+   [Service]
+   User=ec2-user
+   WorkingDirectory=/home/ec2-user/stock-trading
+   ExecStart=/home/ec2-user/stock-trading/venv/bin/python main.py
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+2. Enable and Start:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable antigravity
+   sudo systemctl start antigravity
+   ```
+
+D. Dashboard Deployment
+1. Use `run.sh` script to launch Streamlit in background.
+   ```bash
+   nohup ./run.sh > streamlit.log 2>&1 &
+   ```

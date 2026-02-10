@@ -113,6 +113,25 @@ class AlpacaInterface:
             logger.error(f"Error fetching portfolio history: {e}")
             return None
 
+    def get_open_position(self, symbol: str):
+        """
+        Fetch open position for a symbol. 
+        Returns None if no position exists.
+        Raises exception if an API error occurs.
+        """
+        from alpaca.common.exceptions import APIError
+        try:
+            return self.trading_client.get_open_position(symbol)
+        except APIError as e:
+            # Check for 404 (Position not found)
+            if "position does not exist" in str(e).lower() or e.code == 40410000:
+                return None
+            logger.error(f"Alpaca API Error fetching position for {symbol}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching position for {symbol}: {e}")
+            raise
+
 if __name__ == "__main__":
     # verification
     try:

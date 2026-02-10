@@ -66,16 +66,29 @@ class AgentScheduler:
         logger.info("Market Closing Soon. Liquidating all positions...")
         self.executor.stop() # Stop buying
         
-        # Sell everything
-        for symbol in self.executor.symbols:
-            try:
-                pos = self.executor.alpaca.trading_client.get_open_position(symbol)
+        try:
+            # 1. Cancel all pending orders first
+            self.executor.alpaca.trading_client.cancel_orders()
+            logger.info("Cancelled all pending orders.")
+            
+            # 2. Fetch all open positions once
+            positions = self.executor.alpaca.trading_client.get_all_positions()
+            
+            if not positions:
+                logger.info("No open positions to liquidate.")
+                return
+
+            for pos in positions:
+                symbol = pos.symbol
                 qty = float(pos.qty)
                 if qty > 0:
-                    self.executor.alpaca.submit_order(symbol, qty, 'sell')
-                    logger.info(f"Liquidated {symbol}: {qty}")
-            except:
-                pass # No position
+                    try:
+                        self.executor.alpaca.submit_order(symbol, qty, 'sell')
+                        logger.info(f"✅ Liquidated {symbol}: {qty}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to liquidate {symbol}: {e}")
+        except Exception as e:
+            logger.error(f"Critical error during liquidation: {e}")
 
 if __name__ == "__main__":
     # Test Only

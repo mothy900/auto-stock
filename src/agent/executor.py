@@ -115,14 +115,18 @@ class TradingExecutor:
                             strategy.update_target(open_price)
                     
                     # 3. Generate Signal
-                    # Check if we assume we have 0 position or check actual
+                    # Improved Position Fetching: Skip on API error instead of assuming zero.
                     try:
-                        pos = self.alpaca.trading_client.get_open_position(symbol)
-                        current_qty = float(pos.qty)
-                        avg_entry_price = float(pos.avg_entry_price)
-                    except:
-                        current_qty = 0
-                        avg_entry_price = 0.0
+                        pos = self.alpaca.get_open_position(symbol)
+                        if pos:
+                            current_qty = float(pos.qty)
+                            avg_entry_price = float(pos.avg_entry_price)
+                        else:
+                            current_qty = 0
+                            avg_entry_price = 0.0
+                    except Exception as e:
+                        logger.error(f"⚠️  Skipping {symbol} due to position fetch error: {e}")
+                        continue
                     
                     # Calculate RSI if needed
                     current_rsi = None
