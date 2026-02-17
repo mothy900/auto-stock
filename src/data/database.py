@@ -4,7 +4,6 @@ import logging
 from typing import Optional, List, Dict, Any
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DatabaseManager:

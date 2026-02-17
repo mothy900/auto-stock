@@ -158,15 +158,29 @@ class TradingExecutor:
 
                 await asyncio.sleep(1) # 1 sec Tick
                 
-                # Heartbeat Log every 10 seconds (More frequent updates)
+                # Heartbeat Log every 10 seconds
                 if int(datetime.now().second) % 10 == 0:
+                    current_prices = {}
                     for s in self.strategies:
+                        if s.symbol not in current_prices:
+                            try:
+                                current_prices[s.symbol] = self.alpaca.get_latest_price(s.symbol)
+                            except:
+                                current_prices[s.symbol] = 0.0
+                        
+                        price = current_prices[s.symbol]
                         if isinstance(s, VolatilityBreakoutStrategy) and s.target_price:
-                             # Log the check process
-                            condition = "BUY" if self.alpaca.get_latest_price(s.symbol) >= s.target_price else "WAIT"
-                            logger.info(f"🔍 [{s.symbol}] {s.name} Check: Current {self.alpaca.get_latest_price(s.symbol):.2f} vs Target {s.target_price:.2f} -> {condition}")
+                            condition = "BUY" if price >= s.target_price else "WAIT"
+                            logger.info(f"🔍 [{s.symbol}] {s.name}: {price:.2f} vs Target {s.target_price:.2f} -> {condition}")
+                        elif isinstance(s, BollingerReversionStrategy) and s.lower_band:
+                            if price <= s.lower_band: condition = "BUY"
+                            elif price >= s.sma: condition = "SELL"
+                            else: condition = "WAIT"
+                            logger.info(f"🔍 [{s.symbol}] {s.name}: {price:.2f} (Bands: {s.lower_band:.2f} - {s.upper_band:.2f}) -> {condition}")
+                        elif isinstance(s, RSIMomentumStrategy) and s.daily_sma:
+                            logger.info(f"🔍 [{s.symbol}] {s.name}: {price:.2f} (SMA: {s.daily_sma:.2f}) -> WAIT")
                         else:
-                            logger.info(f"[{s}] Initializing...")
+                            logger.info(f"⏳ [{s.symbol}] {s.name}: Initializing...")
                     await asyncio.sleep(1)
 
             except Exception as e:
