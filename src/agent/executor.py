@@ -31,7 +31,24 @@ class TradingExecutor:
         """Pre-market routine: Optimize K and set Targets."""
         logger.info("Initializing Agent for the day...")
         
-        # 1. Update Market Data is assumed done by Scheduler/Collector separately
+        # 1. Update Dynamic Allocation based on Account Buying Power
+        try:
+            account = self.alpaca.get_account_info()
+            buying_power = float(account.buying_power)
+            
+            # Allocation Strategy: 90% of Buying Power / Number of Symbols
+            allocation_factor = 0.90
+            self.investment_per_symbol = (buying_power * allocation_factor) / len(self.symbols)
+            
+            logger.info(f"💰 Daily Allocation Update:")
+            logger.info(f"   - Buying Power: ${buying_power:,.2f}")
+            logger.info(f"   - New Investment per Symbol: ${self.investment_per_symbol:,.2f} (Total {len(self.symbols)} symbols)")
+            
+        except Exception as e:
+            logger.error(f"Error updating allocation: {e}")
+            # Maintain previous allocation if update fails
+
+        # 2. Update Market Data is assumed done by Scheduler/Collector separately
         # Here we just load what we have from DB to optimize K
         
         for strategy in self.strategies:
